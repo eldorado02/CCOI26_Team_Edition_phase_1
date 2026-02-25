@@ -1,12 +1,9 @@
 import struct
 
-# ════════════════════════════════════════
-#  Constants extracted from knight_vault
-# ════════════════════════════════════════
 
 TARGET = bytes.fromhex(
-    "802d77ca6dfd3e05fb15cfd44b75c4b9"   # chunk 0 (esi=0)
-    "dfea37290ad57a5aaeb0ed6165b3aa2e"   # chunk 1 (esi=1)
+    "802d77ca6dfd3e05fb15cfd44b75c4b9"
+    "dfea37290ad57a5aaeb0ed6165b3aa2e"
 )
 
 ROUND_KEYS_RAW = bytes.fromhex(
@@ -40,16 +37,11 @@ EXTRA1 = list(bytes.fromhex("85bbbda7ad4b455f656b0d077d7b656f"))
 EXTRA2 = list(bytes.fromhex("000306090c0f1215181b1e2124272a2d"))
 
 
-# ════════════════════════════════════════
-#  Precompute inverse tables
-# ════════════════════════════════════════
 
-# Inverse S-box
 INV_SBOX = [0] * 256
 for i, v in enumerate(SBOX):
     INV_SBOX[v] = i
 
-# Inverse permutation: inv_perm[perm[i]] = i
 INV_PERM = [0] * 16
 for i, p in enumerate(PERM):
     INV_PERM[p] = i
@@ -62,9 +54,6 @@ def ror8(b, n):
     return rol8(b, 8 - (n & 7))
 
 
-# ════════════════════════════════════════
-#  Forward cipher (for verification)
-# ════════════════════════════════════════
 
 def encrypt_block(block, esi):
     data = list(block)
@@ -73,79 +62,57 @@ def encrypt_block(block, esi):
 
     for r in range(6):
         rk = ROUND_KEYS[r]
-        # Step a: XOR with (ebp + offset) ^ round_key
         for i in range(16):
             data[i] = ((ebp + OFFSET[i]) & 0xFF) ^ rk[i] ^ data[i]
-        # Step b: S-box
         data = [SBOX[b] for b in data]
-        # Step c: Permutation  output[i] = input[perm[i]]
         data = [data[PERM[i]] for i in range(16)]
-        # Step d: Cumulative XOR (data[0] unchanged, data[i] = XOR(data[0..i]))
         dl = data[0]
         for i in range(1, 16):
             dl = dl ^ data[i]
             data[i] = dl
-        # Step e: Rotation
         for i in range(16):
             data[i] = rol8(data[i], (i % 7) + 1)
         ebp = (ebp + 11) & 0xFF
 
-    # Final XOR
     for i in range(16):
         data[i] = ((r12 + EXTRA2[i]) & 0xFF) ^ EXTRA1[i] ^ data[i]
 
     return bytes(data)
 
 
-# ════════════════════════════════════════
-#  Inverse cipher
-# ════════════════════════════════════════
 
 def decrypt_block(block, esi):
     data = list(block)
     r12  = 0 if esi == 0 else 41
     ebp_start = 0 if esi == 0 else 61
 
-    # Undo final XOR (self-inverse)
     for i in range(16):
         data[i] = ((r12 + EXTRA2[i]) & 0xFF) ^ EXTRA1[i] ^ data[i]
 
-    # Compute ebp values for all rounds
     ebp_vals = [(ebp_start + 11 * r) & 0xFF for r in range(6)]
 
-    # Undo rounds in REVERSE order
     for r in range(5, -1, -1):
         rk  = ROUND_KEYS[r]
         ebp = ebp_vals[r]
 
-        # Undo step e: rotation  →  ror
         for i in range(16):
             data[i] = ror8(data[i], (i % 7) + 1)
 
-        # Undo step d: cumulative XOR
-        # Forward: data[i] = XOR(orig[0..i])  orig[0] unchanged
-        # Inverse: orig[0] = data[0]; orig[i] = data[i] ^ data[i-1]
         for i in range(15, 0, -1):
             data[i] = data[i] ^ data[i - 1]
 
-        # Undo step c: inverse permutation  data[perm[i]] = old[i]
         tmp = data[:]
         for i in range(16):
             data[PERM[i]] = tmp[i]
 
-        # Undo step b: inverse S-box
         data = [INV_SBOX[b] for b in data]
 
-        # Undo step a: same XOR (self-inverse)
         for i in range(16):
             data[i] = ((ebp + OFFSET[i]) & 0xFF) ^ rk[i] ^ data[i]
 
     return bytes(data)
 
 
-# ════════════════════════════════════════
-#  Main
-# ════════════════════════════════════════
 
 chunk0 = TARGET[:16]
 chunk1 = TARGET[16:]
@@ -158,7 +125,6 @@ print(f"[*] Chunk 0 decrypted : {plain0.hex()} | {plain0}")
 print(f"[*] Chunk 1 decrypted : {plain1.hex()} | {plain1}")
 print(f"\n[+] FLAG: {flag.decode('latin-1')}")
 
-# Self-test: re-encrypt and compare to target
 enc0 = encrypt_block(plain0, 0)
 enc1 = encrypt_block(plain1, 1)
 ok = (enc0 == chunk0 and enc1 == chunk1)
