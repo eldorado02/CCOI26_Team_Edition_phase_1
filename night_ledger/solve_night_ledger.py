@@ -1,0 +1,32 @@
+# Night Ledger — solver
+# Reversing the two transformations applied to the 32-byte token
+
+# Constants extracted from .rodata (objdump -s -j .rodata)
+target1 = bytes([0x40,0x4b,0x42,0x5b,0x05,0x0a,0x3a,0x08,
+                 0x7a,0x17,0x1d,0x0e,0x00,0x28,0x5a,0x2a])  # 0x2090: expected output of first block
+xor1    = bytes([0x23,0x28,0x2d,0x32,0x37,0x3c,0x41,0x46,
+                 0x4b,0x50,0x55,0x5a,0x5f,0x64,0x69,0x6e])  # 0x20a0: XOR key for first block
+
+target2 = bytes([0x1c,0x2d,0x3c,0x37,0x39,0x0d,0x3d,0x7f,
+                 0x39,0x75,0x70,0x2b,0x62,0x48,0x04,0x53])  # 0x2080: expected output of second block
+xor2    = bytes([0x61,0x5e,0x5b,0x58,0x55,0x52,0x4f,0x4c,
+                 0x49,0x46,0x43,0x40,0x3d,0x3a,0x37,0x34])  # 0x20b0: XOR key for second block
+
+def swap_case(b):
+    """Swap letter case (self-inverse)."""
+    if 0x61 <= b <= 0x7a: return b - 0x20  # lower -> upper
+    if 0x41 <= b <= 0x5a: return b + 0x20  # upper -> lower
+    return b
+
+# --- Block 1: first 16 bytes ---
+# Transform: swap_case(input[0:16]) XOR xor1 == target1
+# Inverse:   input[i] = swap_case(target1[i] XOR xor1[i])
+part1 = bytes(swap_case(t ^ x) for t, x in zip(target1, xor1))
+
+# --- Block 2: last 16 bytes ---
+# Transform: xor2 XOR reversed(input[16:32]) == target2
+# Inverse:   input[16:32] = reverse(xor2 XOR target2)
+part2 = bytes(x ^ t for x, t in zip(xor2, target2))[::-1]
+
+flag = (part1 + part2).decode()
+print(f"FLAG: {flag}")
