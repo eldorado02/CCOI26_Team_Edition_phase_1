@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-# ─── Infiltré (Fantôme de la Vanille) ──────────────────────────────────────
-# Category: Forensics
-# Flag: CCOI26{v4n1ll4_15l4nd_s3cr3t_1n_pl41n_s1ght}
-# ---------------------------------------------------------------------------
 import struct, base64, hashlib
 
 data = open('image.png', 'rb').read()

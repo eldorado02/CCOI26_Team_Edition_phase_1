@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-Solver — Easy Peasy 2
-Flag: CCOI26{_3asy_p3asy_2_4ll_3asy_p3asy_}
-
-Encryption (enc_original.py) applies two operations in order:
-  1. Atbash substitution  (A↔Z, a↔z — involution)
-  2. Block-reversal of 4-byte blocks  (also an involution)
-
-Since both operations are involutions, decryption = applying them in reverse order:
-  1. Undo block-reversal  → reverse each 4-byte block
-  2. Undo Atbash          → apply Atbash again
-"""
 
 from pathlib import Path
 
@@ -40,4 +28,3 @@ def solve(path: str = "challenge_ep2.bin") -> str:
 
 if __name__ == "__main__":
     print(solve())
-    # Expected: CCOI26{_3asy_p3asy_2_4ll_3asy_p3asy_}

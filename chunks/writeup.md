@@ -1,7 +1,7 @@
 # Writeup — Chunks
 
 **Category:** Cryptographie  
-**Files:** `enc.py`, `challenge.bin`  
+**Files:** `enc_chunks.py`, `challenge.bin`  
 **Flag:** `CCOI26{ChUnK5_0f_K3y5_4nd_0ff53t5}`
 
 ---
@@ -10,25 +10,37 @@
 
 > Find the flag.
 
-Deux fichiers : `enc.py` (le script de chiffrement) et `challenge.bin` (34 octets de ciphertext).
+Deux fichiers fournis : `enc_chunks.py` (le script de chiffrement) et `challenge.bin` (34 octets de ciphertext).
 
 ---
 
-## Comprendre le chiffrement
+## Le problème
 
-En lisant `enc.py` :
+Le flag est chiffré de la façon suivante dans `enc_chunks.py` :
 
-```python
-data = bytes(((v + i) & 0xFF) ^ k for i, v in enumerate(chunk))
+1. Le flag (34 caractères) est découpé en **4 chunks** de tailles quasi-égales (`[8, 8, 9, 9]`).
+2. Chaque chunk reçoit une **clé aléatoire** `k ∈ [1, 80]` (tirée avec `random.randint`).
+3. Chaque octet `v` à la position locale `i` dans son chunk est transformé ainsi :
+   ```
+   ciphertext[byte] = ((v + i) & 0xFF) ^ k
+   ```
+   → on décale d'abord par la position (`+ i`), puis XOR avec la clé du chunk.
+
+Le résultat est écrit dans `challenge.bin`. Les clés **ne sont pas fournies** : il faut les retrouver.
+
+**Pourquoi c'est cassable ?** L'espace des clés est minuscule : seulement **80 valeurs possibles** par chunk, soit au maximum 80⁴ = 40 960 000 combinaisons — et en pratique beaucoup moins grâce aux contraintes connues sur le flag.
+
+---
+
+## Déchiffrement
+
+L'opération inverse de `((v + i) & 0xFF) ^ k` est :
+
+```
+v = ((ciphertext[byte] ^ k) - i) & 0xFF
 ```
 
-Le flag est découpé en **4 chunks** de taille quasi-égale. Chaque chunk a sa propre clé `k ∈ [1, 80]`. Pour chaque byte à la position `i`, on additionne `i` avant XOR avec la clé.
-
-Pour un ciphertext de 34 octets les tailles sont `[9, 9, 8, 8]`.
-
-**Déchiffrement :** `v = ((x ^ k) - i) & 0xFF`
-
-L'espace des clés est minuscule — seulement 80 valeurs par chunk — donc tout se brute-force facilement.
+Pour chaque chunk, on XOR le ciphertext avec la clé `k`, puis on soustrait l'offset local `i`. Il suffit donc de trouver la bonne valeur de `k` pour chaque chunk.
 
 ---
 
@@ -75,6 +87,8 @@ Pour les deux chunks du milieu, je teste toutes les 80 × 80 combinaisons et je 
 
 ## Script
 
+Le script complet est dans `solve_chunks_v2.py`. Voici le cœur de la logique :
+
 ```python
 from pathlib import Path
 import string
@@ -96,13 +110,16 @@ def decrypt_chunk(enc_chunk, key):
 
 CTF_CHARS = set(string.ascii_letters + string.digits + '_{}')
 
+# Chunk 0 : préfixe connu → clé directe
 k0 = enc[0] ^ ord('C')
 part0 = decrypt_chunk(enc[offsets[0][0]:offsets[0][1]], k0)
 
+# Chunk 3 : seul k donnant un '}' final
 k3 = next(k for k in range(1, 81)
           if decrypt_chunk(enc[offsets[3][0]:offsets[3][1]], k).endswith('}'))
 part3 = decrypt_chunk(enc[offsets[3][0]:offsets[3][1]], k3)
 
+# Chunks 1 & 2 : brute-force avec filtre alphanumérique
 best = (0, None, None)
 for k1 in range(1, 81):
     p1 = decrypt_chunk(enc[offsets[1][0]:offsets[1][1]], k1)

@@ -40,4 +40,3 @@ def solve() -> str:
 
 if __name__ == "__main__":
     print(solve())
-    # Expected: CCOI26{kn1ght_squ4d_0rd3r_l0ck}

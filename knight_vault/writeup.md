@@ -1,7 +1,7 @@
 # Writeup — Knight Vault
 
-**Category:** Cryptographie  
-**Files:** `enc.py`, `enc_flag.bin`  
+**Category:** Reverse Engineering  
+**Binary:** `knight_vault`  
 **Flag:** `CCOI26{kn1ght_v4ult_spn_r0unds1}`
 
 ---

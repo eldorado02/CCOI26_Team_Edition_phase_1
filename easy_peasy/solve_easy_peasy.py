@@ -27,5 +27,6 @@ for key in range(1, 81):
     s = d.decode('latin-1')
     if s.startswith('CCOI26{') and s.endswith('}'):
         print(f"    key={key:2d} -> {s}  *** MATCH ***")
+        break
     elif all(chr(b) in string.printable for b in d):
         print(f"    key={key:2d} -> {s}")
